@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schema Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SS</div>
+        <div>
+          <strong>Schema Studio</strong>
+          <span>SEO structured data suite</span>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="Primary">
+        <button class="nav-item active" data-section="extract">
+          <span class="nav-icon">E</span>
+          Extract Schema
+        </button>
+        <button class="nav-item" data-section="replicate">
+          <span class="nav-icon">R</span>
+          Replicate Schema
+        </button>
+        <button class="nav-item" data-section="generate">
+          <span class="nav-icon">G</span>
+          Generate Schema
+        </button>
+        <button class="nav-item" data-section="tools">
+          <span class="nav-icon">T</span>
+          SEO Utilities
+        </button>
+      </nav>
+
+      <div class="sidebar-panel">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Local mode</strong>
+          <p>Runs fully in your browser. URL extraction depends on site CORS policy.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Structured data operations</p>
+          <h1 id="pageTitle">Extract Schema</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="loadSavedBtn">Saved Schemas</button>
+          <a class="primary-link" id="richResultsLink" href="https://search.google.com/test/rich-results" target="_blank" rel="noreferrer">Rich Results Test</a>
+        </div>
+      </header>
+
+      <section class="quick-card" aria-labelledby="quickTitle">
+        <div>
+          <span class="pill">Quick Extract</span>
+          <h2 id="quickTitle">Pull schema from a URL in one pass</h2>
+        </div>
+        <form class="quick-form" id="quickExtractForm">
+          <input id="quickUrl" type="url" placeholder="https://example.com/service-page" required>
+          <button class="primary-btn" type="submit">Extract</button>
+        </form>
+      </section>
+
+      <section class="section-panel active" id="extractSection">
+        <div class="panel-grid two-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Schema Extractor</p>
+                <h2>Find JSON-LD, Microdata, and RDFa</h2>
+              </div>
+              <span class="badge">Extractor</span>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Extract options">
+              <button class="tab active" data-tab-group="extract" data-tab="urlExtract">URL</button>
+              <button class="tab" data-tab-group="extract" data-tab="manualExtract">Paste Schema</button>
+              <button class="tab" data-tab-group="extract" data-tab="htmlExtract">Paste HTML</button>
+            </div>
+
+            <div class="tab-panel active" id="urlExtract">
+              <form id="extractForm" class="stack">
+                <label>
+                  Website URL
+                  <input id="extractUrl" type="url" placeholder="https://competitor.com" required>
+                </label>
+                <button class="primary-btn" type="submit">Extract schema</button>
+              </form>
+              <p class="helper">If the target blocks browser requests, paste page HTML or schema in the neighboring tabs.</p>
+            </div>
+
+            <div class="tab-panel" id="manualExtract">
+              <label>
+                JSON-LD or raw schema
+                <textarea id="manualSchemaInput" spellcheck="false" placeholder='{"@context":"https://schema.org","@type":"Organization"}'></textarea>
+              </label>
+              <button class="primary-btn" id="parseManualBtn" type="button">Parse schema</button>
+            </div>
+
+            <div class="tab-panel" id="htmlExtract">
+              <label>
+                Page HTML
+                <textarea id="htmlInput" spellcheck="false" placeholder="<html>...schema markup...</html>"></textarea>
+              </label>
+              <button class="primary-btn" id="parseHtmlBtn" type="button">Extract from HTML</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Output</p>
+                <h2>Editable schema workspace</h2>
+              </div>
+              <div class="mini-actions">
+                <button class="icon-btn" id="copyExtractBtn" title="Copy schema" type="button">Copy</button>
+                <button class="icon-btn" id="downloadJsonBtn" title="Download JSON" type="button">JSON</button>
+                <button class="icon-btn" id="downloadTxtBtn" title="Download TXT" type="button">TXT</button>
+              </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Output format">
+              <button class="tab active" data-tab-group="output" data-tab="rawOutput">Raw JSON</button>
+              <button class="tab" data-tab-group="output" data-tab="formattedOutput">Structured View</button>
+              <button class="tab" data-tab-group="output" data-tab="validationOutput">Validation</button>
+            </div>
+
+            <div class="tab-panel active" id="rawOutput">
+              <textarea id="schemaEditor" class="code-editor" spellcheck="false" placeholder="Extracted or generated schema appears here."></textarea>
+            </div>
+            <div class="tab-panel" id="formattedOutput">
+              <div id="structuredView" class="structured-view empty-state">No schema loaded yet.</div>
+            </div>
+            <div class="tab-panel" id="validationOutput">
+              <div id="validationView" class="validation-list empty-state">Run an extraction or generation to validate schema.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-panel" id="replicateSection">
+        <div class="panel-grid two-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Main feature</p>
+                <h2>Schema Replicator</h2>
+              </div>
+              <span class="badge success">Structure cloning</span>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Replicate source">
+              <button class="tab active" data-tab-group="replicate" data-tab="replicateUrlPanel">From URL</button>
+              <button class="tab" data-tab-group="replicate" data-tab="replicateCustomPanel">Custom Schema</button>
+              <button class="tab" data-tab-group="replicate" data-tab="replicateSitemapPanel">Sitemap Batch</button>
+            </div>
+
+            <div class="tab-panel active" id="replicateUrlPanel">
+              <form id="competitorForm" class="stack">
+                <label>
+                  Competitor or example URL
+                  <input id="competitorUrl" type="url" placeholder="https://competitor.com/location" required>
+                </label>
+                <button class="primary-btn" type="submit">Extract source schema</button>
+              </form>
+            </div>
+
+            <div class="tab-panel" id="replicateCustomPanel">
+              <label>
+                Paste schema to adapt
+                <textarea id="customReplicateSchema" spellcheck="false" placeholder="Paste any JSON-LD schema to use as a template."></textarea>
+              </label>
+              <button class="primary-btn" id="useCustomSchemaBtn" type="button">Use as template</button>
+            </div>
+
+            <div class="tab-panel" id="replicateSitemapPanel">
+              <form id="sitemapUrlForm" class="stack">
+                <label>
+                  Sitemap URL
+                  <input id="sitemapUrl" type="url" placeholder="https://yourbrand.com/sitemap.xml">
+                </label>
+                <button class="primary-btn" type="submit">Generate from sitemap URL</button>
+              </form>
+              <div class="divider"></div>
+              <label>
+                Upload sitemap.xml
+                <input id="sitemapUpload" type="file" accept=".xml,text/xml,application/xml">
+              </label>
+              <div id="sitemapSummary" class="sitemap-list empty-state">Enter a sitemap URL or upload a sitemap to generate page-type schemas.</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <form id="replicateForm" class="form-grid">
+              <label>
+                Your website URL
+                <input id="targetUrl" type="url" placeholder="https://yourbrand.com">
+              </label>
+              <label>
+                Brand or business name
+                <input id="targetName" type="text" placeholder="Your Brand">
+              </label>
+              <label>
+                Phone
+                <input id="targetPhone" type="tel" placeholder="+1 555 010 0100">
+              </label>
+              <label>
+                Email
+                <input id="targetEmail" type="email" placeholder="hello@yourbrand.com">
+              </label>
+              <label class="wide">
+                Address
+                <input id="targetAddress" type="text" placeholder="123 Market Street, San Francisco, CA">
+              </label>
+              <label class="wide">
+                Short description
+                <textarea id="targetDescription" placeholder="Describe your business or page in one sentence."></textarea>
+              </label>
+              <div class="wide dynamic-fields">
+                <div class="dynamic-fields-header">
+                  <div>
+                    <p class="eyebrow">Competitor fields</p>
+                    <h3>Auto-created from source schema</h3>
+                  </div>
+                  <span class="badge" id="dynamicFieldCount">0 fields</span>
+                </div>
+                <div id="dynamicFieldList" class="field-list empty-state">Extract or paste competitor schema to create matching editable fields.</div>
+              </div>
+              <button class="primary-btn wide" type="submit">Generate replicated schema</button>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Template analysis</p>
+                <h2>Source schema map</h2>
+              </div>
+              <button class="ghost-btn" id="saveSchemaBtn" type="button">Save schema</button>
+            </div>
+            <div id="replicationSummary" class="schema-map empty-state">Extract or paste a source schema to see its shape.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-panel" id="generateSection">
+        <div class="panel-grid two-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">AI Schema Generator</p>
+                <h2>Create schema from guided inputs</h2>
+              </div>
+              <span class="badge warning">AI simulated</span>
+            </div>
+
+            <form id="generatorForm" class="form-grid">
+              <label>
+                Schema type
+                <select id="schemaType">
+                  <option>LocalBusiness</option>
+                  <option>Organization</option>
+                  <option>Person</option>
+                  <option>Article</option>
+                  <option>BlogPosting</option>
+                  <option>Product</option>
+                  <option>FAQPage</option>
+                  <option>MedicalBusiness</option>
+                  <option>Physician</option>
+                  <option>MedicalClinic</option>
+                </select>
+              </label>
+              <label>
+                Website URL
+                <input id="generatorUrl" type="url" placeholder="https://example.com">
+              </label>
+              <label>
+                Name or title
+                <input id="generatorName" type="text" placeholder="Business, author, article, or product name">
+              </label>
+              <label>
+                Phone or SKU
+                <input id="generatorPhone" type="text" placeholder="+1 555 000 1111">
+              </label>
+              <label class="wide">
+                Description
+                <textarea id="generatorDescription" placeholder="What should search engines understand about this entity?"></textarea>
+              </label>
+              <label class="wide">
+                FAQ pairs, one per line
+                <textarea id="generatorFaq" placeholder="Question? | Answer"></textarea>
+              </label>
+              <button class="primary-btn wide" type="submit">Generate schema</button>
+            </form>
+          </article>
+
+          <article class="card assistant-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Schema Assistant</p>
+                <h2>Improve with AI</h2>
+              </div>
+              <button class="ghost-btn" id="improveAiBtn" type="button">Improve with AI</button>
+            </div>
+            <div class="chat-box" id="chatBox">
+              <div class="chat-message assistant">Choose a schema type and add the core details. I will tighten required fields, add search-friendly context, and flag missing basics.</div>
+            </div>
+            <form id="chatForm" class="chat-form">
+              <input id="chatInput" type="text" placeholder="Ask about required fields, schema types, or validation">
+              <button class="primary-btn" type="submit">Send</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-panel" id="toolsSection">
+        <div class="panel-grid two-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Compare</p>
+                <h2>Schema diff view</h2>
+              </div>
+              <button class="primary-btn" id="compareBtn" type="button">Compare</button>
+            </div>
+            <div class="compare-grid">
+              <textarea id="compareA" spellcheck="false" placeholder="Schema A"></textarea>
+              <textarea id="compareB" spellcheck="false" placeholder="Schema B"></textarea>
+            </div>
+            <div id="diffView" class="diff-view empty-state">Paste two schemas and compare field differences.</div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Library</p>
+                <h2>Saved schemas</h2>
+              </div>
+              <button class="ghost-btn" id="clearSavedBtn" type="button">Clear</button>
+            </div>
+            <div id="savedSchemas" class="saved-list empty-state">No saved schemas yet.</div>
+          </article>
+        </div>
+      </section>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
