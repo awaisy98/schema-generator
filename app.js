@@ -269,23 +269,26 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
   toast("Fetching website and extracting schema...");
 
   try {
-
     const schema = await fetchHtmlForExtraction(cleanUrl);
 
-if (shouldUpdateOutput) {
-  updateOutput(schema.length ? schema : null);
-}
+    if (shouldUpdateOutput) {
+      updateOutput(schema.length ? schema : null);
+    }
 
-if (schema.length > 0) {
-  toast(`✅ Found ${schema.length} schema block(s).`);
-  return schema;
-}
+    if (schema.length > 0) {
+      toast(`✅ Found ${schema.length} schema block(s).`);
+      return schema;
+    }
 
-toast("⚠️ No schema markup found on this page.");
-return [];
+    toast("⚠️ No schema markup found on this page.");
+    return [];
+
+  } catch (err) {
+    console.error("Extraction failed:", err);
+    toast("Extraction failed. Check console.");
+    return null;
   }
 }
-
 async function fetchHtmlForExtraction(url) {
   try {
     const res = await fetch(schemaExtractApi, {
