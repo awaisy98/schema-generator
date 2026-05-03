@@ -166,6 +166,7 @@ function bindGenerator() {
 
 function bindTools() {
   document.getElementById("compareBtn").addEventListener("click", compareSchemas);
+  document.getElementById("diffBtn").addEventListener("click", smartDiffSchemas);
 
   document.getElementById("loadSavedBtn").addEventListener("click", () => {
     document.querySelector('[data-section="tools"]').click();
@@ -923,6 +924,52 @@ function compareSchemas() {
 
   output.className = rows.length ? "diff-view" : "diff-view empty-state";
   output.innerHTML = rows.length ? rows.join("") : "Schemas match after normalization.";
+}
+
+function smartDiffSchemas() {
+  const a = parseManualSchema(document.getElementById("compareA").value);
+  const b = parseManualSchema(document.getElementById("compareB").value);
+
+  const output = document.getElementById("diffView");
+  if (!a || !b) return toast("Paste both schemas first.");
+
+  const flatA = flattenObject(a);
+  const flatB = flattenObject(b);
+
+  const allKeys = new Set([...Object.keys(flatA), ...Object.keys(flatB)]);
+
+  let improved = [];
+
+  allKeys.forEach((key) => {
+    const valA = flatA[key];
+    const valB = flatB[key];
+
+    if (JSON.stringify(valA) !== JSON.stringify(valB)) {
+      improved.push({
+        field: key,
+        status: !valA ? "added" : !valB ? "removed" : "changed",
+        before: valA,
+        after: valB
+      });
+    }
+  });
+
+  output.className = "diff-view";
+
+  output.innerHTML = improved.length
+    ? improved.map(item => `
+        <div class="diff-row ${item.status}">
+          <strong>${escapeHtml(item.field)}</strong>
+          <p>
+            <span style="color:#ff6b6b">Before:</span> ${escapeHtml(summarizeValue(item.before))}
+            <br>
+            <span style="color:#51cf66">After:</span> ${escapeHtml(summarizeValue(item.after))}
+          </p>
+        </div>
+      `).join("")
+    : `<div class="diff-view empty-state">No meaningful differences found.</div>`;
+
+  toast(`🔍 Smart diff analyzed ${improved.length} changes.`);
 }
 
 function saveCurrentSchema() {
