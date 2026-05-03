@@ -166,25 +166,36 @@ function bindGenerator() {
 
 function bindTools() {
   document.getElementById("compareBtn").addEventListener("click", compareSchemas);
+
   document.getElementById("loadSavedBtn").addEventListener("click", () => {
     document.querySelector('[data-section="tools"]').click();
     renderSavedSchemas();
   });
+
   document.getElementById("clearSavedBtn").addEventListener("click", () => {
     state.savedSchemas = [];
     localStorage.setItem("schemaStudioSaved", "[]");
     renderSavedSchemas();
     toast("Saved schemas cleared.");
   });
+
+  // ✅ AUTO FIX BUTTON (corrected)
   document.getElementById("autoFixBtn").addEventListener("click", () => {
-  if (!state.currentSchema) return toast("Load or generate schema first.");
+    if (!state.currentSchema) {
+      return toast("Load or generate schema first.");
+    }
 
-  const fixed = autoFixSchema(state.currentSchema);
-  updateOutput(fixed);
+    const fixed = improveSchema(state.currentSchema); // ✅ FIX HERE
 
-  addChat("assistant", "Schema auto-fixed with SEO best practices.");
-  toast("✅ Schema fixed.");
-});
+    updateOutput(fixed);
+
+    addChat("assistant", "Schema auto-fixed with SEO best practices.");
+    toast("✅ Schema fixed.");
+  });
+}
+
+function autoFixSchema(schema) {
+  return improveSchema(schema);
 }
 
 async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = true) {
