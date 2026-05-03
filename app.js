@@ -184,29 +184,22 @@ function bindReplication() {
 
 function bindGenerator() {
   document.getElementById("generatorForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const schema = buildGeneratedSchema();
-    if (schema) updateOutput(schema);
-    else toast("No schema found or extraction failed.");
-    addChat("assistant", `Generated ${schema["@type"]} schema with a clean Schema.org baseline. Review required fields in the validation tab.`);
-  });
+  event.preventDefault();
 
-  document.getElementById("improveAiBtn").addEventListener("click", () => {
-    if (!state.currentSchema) return toast("Generate or load schema first.");
-    const improved = improveSchema(state.currentSchema);
-    updateOutput(improved);
-    addChat("assistant", "I added practical search enhancements where possible: context, description fallbacks, URLs, publisher metadata, and FAQ cleanup.");
-  });
+  const schema = buildGeneratedSchema();
 
-  document.getElementById("chatForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const input = document.getElementById("chatInput");
-    const message = input.value.trim();
-    if (!message) return;
-    addChat("user", message);
-    input.value = "";
-    addChat("assistant", getAssistantReply(message));
-  });
+  if (!schema) {
+    toast("No schema generated.");
+    return;
+  }
+
+  updateOutput(schema);
+
+  addChat(
+    "assistant",
+    `Generated ${schema["@type"] || "schema"} schema with a clean Schema.org baseline. Review required fields in the validation tab.`
+  );
+});
 }
 
 function bindTools() {
@@ -295,6 +288,8 @@ if (schema.length > 0) {
 
 toast("⚠️ No schema markup found on this page.");
 return [];
+  }
+}
 
 async function fetchHtmlForExtraction(url) {
   try {
