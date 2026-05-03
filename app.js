@@ -931,8 +931,8 @@ function compareSchemas() {
   const output = document.getElementById("diffView");
   if (!a || !b) return;
 
-  const flatA = flattenObject(a);
-  const flatB = flattenObject(b);
+  const flatA = flattenObject(normalizeSchema(a));
+  const flatB = flattenObject(normalizeSchema(b));
   const keys = [...new Set([...Object.keys(flatA), ...Object.keys(flatB)])].sort();
   const rows = keys
     .filter((key) => JSON.stringify(flatA[key]) !== JSON.stringify(flatB[key]))
@@ -1347,6 +1347,19 @@ function toast(message) {
   toast.timer = setTimeout(() => dom.toast.classList.remove("visible"), 3200);
 }
 function generateAIDiff(a, b) {
+    const seoImpactMap = {
+    logo: "May reduce Knowledge Panel eligibility",
+    name: "Core entity signal for Google understanding",
+    url: "Critical for indexing and entity linking",
+    description: "Improves contextual relevance in search results",
+    "@type": "Defines schema category for rich results eligibility",
+    address: "Important for Local SEO visibility",
+    telephone: "Trust signal for Local Business schema",
+    image: "Impacts rich result appearance in SERP",
+    offers: "Required for Product rich results",
+    author: "E-E-A-T authority signal",
+    datePublished: "Freshness ranking signal"
+  };
   const flatA = flattenObject(a);
   const flatB = flattenObject(b);
 
@@ -1359,19 +1372,19 @@ function generateAIDiff(a, b) {
       changes.push({
         type: "added",
         key,
-        message: `${key} was added (positive SEO signal)`
+        message: `${key} was added. ${seoImpactMap[key] || "Improves structured data completeness and search visibility."}`
       });
     } else if (!(key in flatB)) {
       changes.push({
         type: "removed",
         key,
-        message: `${key} was removed (possible SEO loss)`
+        message: `${key} was removed. ${seoImpactMap[key] || "May negatively impact schema completeness and rich result eligibility."}`
       });
     } else if (JSON.stringify(flatA[key]) !== JSON.stringify(flatB[key])) {
       changes.push({
         type: "changed",
         key,
-        message: `${key} was modified (may affect rich results)`
+        message: `${key} was modified. ${seoImpactMap[key] || "May affect how Google interprets structured data."}`
       });
     }
   });
@@ -1395,4 +1408,21 @@ function showAIDiff(diff) {
   output.innerHTML = html;
 
   addChat("assistant", `AI Diff complete: ${diff.length} changes analyzed.`);
+}
+
+function normalizeSchema(schema) {
+  if (!schema) return {};
+
+  if (Array.isArray(schema)) {
+    return { "@graph": schema };
+  }
+
+  if (schema["@graph"]) {
+    return schema;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    ...schema
+  };
 }
