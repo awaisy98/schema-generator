@@ -142,7 +142,8 @@ function bindGenerator() {
   document.getElementById("generatorForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const schema = buildGeneratedSchema();
-    updateOutput(schema);
+    if (schema) updateOutput(schema);
+    else toast("No schema found or extraction failed.");
     addChat("assistant", `Generated ${schema["@type"]} schema with a clean Schema.org baseline. Review required fields in the validation tab.`);
   });
 
@@ -186,7 +187,13 @@ function bindTools() {
       return toast("Load or generate schema first.");
     }
 
-    const fixed = improveSchema(state.currentSchema); // ✅ FIX HERE
+    if (!state.currentSchema) {
+    toast("No schema loaded to fix.");
+    return;
+    }
+
+    const fixed = safeRun(() => improveSchema(state.currentSchema));
+    if (fixed) updateOutput(fixed); // ✅ FIX HERE
 
     updateOutput(fixed);
 
@@ -255,7 +262,10 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
     }
 
     // Show real error message
-    toast(`❌ Extraction failed: ${error.message}`);
+    if (!schema || schema.length === 0) {
+  toast("No schema found. Try manual HTML input.");
+  return null;
+}
 
     return context === "replicator" ? fallback : null;
   }
@@ -1425,4 +1435,14 @@ function normalizeSchema(schema) {
     "@context": "https://schema.org",
     ...schema
   };
+}
+
+function safeRun(fn, fallbackMessage = "Something went wrong") {
+  try {
+    return fn();
+  } catch (err) {
+    console.error(err);
+    toast(fallbackMessage);
+    return null;
+  }
 }
