@@ -126,6 +126,9 @@ function setCorsHeaders(res) {
 
 const server = http.createServer(async (request, response) => {
 
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
   // ✅ HANDLE CORS PRE-FLIGHT REQUEST
   if (request.method === "OPTIONS") {
     setCorsHeaders(response);
