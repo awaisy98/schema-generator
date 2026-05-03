@@ -6,7 +6,7 @@ const state = {
   savedSchemas: JSON.parse(localStorage.getItem("schemaStudioSaved") || "[]")
 };
 
-const schemaExtractApi = "https://schema-generator-studio.onrender.com/api/extract-schema";
+const schemaExtractApi = "/api/extract-schema";
 
 const schemaDefaults = {
   LocalBusiness: ["name", "url", "telephone", "address", "description"],
@@ -269,13 +269,8 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
   toast("Fetching website and extracting schema...");
 
   try {
-    const html = await fetchHtmlForExtraction(cleanUrl);
 
-    if (!html || html.length < 50) {
-      throw new Error("Empty or invalid HTML received");
-    }
-
-    const schema = extractSchemasFromHtml(html, cleanUrl) || [];
+    const schema = await fetchHtmlForExtraction(cleanUrl);
 
 if (shouldUpdateOutput) {
   updateOutput(schema.length ? schema : null);
