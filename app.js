@@ -307,38 +307,36 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
 
     // Show real error message
     toast("No schema found. Try manual HTML input.");
-    return context === "replicator" ? fallback : null;
+    return null;
 }
-
-    return context === "replicator" ? fallback : null;
   }
 }
 
 async function fetchHtmlForExtraction(url) {
-  const res = await fetch(schemaExtractApi, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url })
-  });
-
-  let data;
-
   try {
-    data = await res.json();
-  } catch {
-    throw new Error("Invalid JSON response from server");
-  }
+    const res = await fetch(schemaExtractApi, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
 
-  if (!res.ok) {
-    console.error("API Error:", data);
-    throw new Error(data.error || `API returned ${res.status}`);
-  }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "API error");
+    }
 
-  if (!data.html) {
-    throw new Error("No HTML returned from API");
-  }
+    const data = await res.json();
 
-  return data.html;
+    if (!data || !data.html) {
+      throw new Error("No HTML returned from API");
+    }
+
+    return data.html;
+
+  } catch (err) {
+    console.error("FETCH FAILED:", err);
+    throw new Error("Backend request failed (CORS or server issue)");
+  }
 }
 
 function extractSchemasFromHtml(html, pageUrl = "") {
