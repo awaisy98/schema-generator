@@ -40,12 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
     bindTools();
     renderSavedSchemas();
     updateOutput(null);
-
     console.log("All systems initialized");
   } catch (err) {
-    console.error("App initialization failed:", err);
+    console.error("INIT FAILED:", err);
   }
 });
+
+
 // =============================
 // 🔥 SCHEMA ENGINE (NEW CORE)
 // =============================
@@ -210,29 +211,30 @@ function bindGenerator() {
 
 function bindTools() {
   console.log("bindTools running");
-  document.getElementById("compareBtn").addEventListener("click", compareSchemas);
-  document.getElementById("diffBtn").addEventListener("click", smartDiffSchemas);
 
-  document.getElementById("loadSavedBtn").addEventListener("click", () => {
-    document.querySelector('[data-section="tools"]').click();
+  const safeBind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el) return console.warn("Missing button:", id);
+    el.addEventListener("click", fn);
+  };
+
+  safeBind("compareBtn", compareSchemas);
+  safeBind("diffBtn", smartDiffSchemas);
+
+  safeBind("loadSavedBtn", () => {
+    document.querySelector('[data-section="tools"]')?.click();
     renderSavedSchemas();
   });
 
-  document.getElementById("clearSavedBtn").addEventListener("click", () => {
+  safeBind("clearSavedBtn", () => {
     state.savedSchemas = [];
     localStorage.setItem("schemaStudioSaved", "[]");
     renderSavedSchemas();
     toast("Saved schemas cleared.");
   });
 
-  // =========================
-  // ✅ AUTO FIX BUTTON (FIXED)
-  // =========================
-  document.getElementById("autoFixBtn").addEventListener("click", () => {
-    if (!state.currentSchema) {
-      toast("Load or generate schema first.");
-      return;
-    }
+  safeBind("autoFixBtn", () => {
+    if (!state.currentSchema) return toast("Load or generate schema first.");
 
     const fixed = safeRun(() =>
       autoFixSchema(structuredClone(state.currentSchema))
@@ -241,17 +243,13 @@ function bindTools() {
     if (!fixed) return;
 
     updateOutput(fixed);
-
     addChat("assistant", "Schema auto-fixed with structural cleanup rules.");
     toast("✅ Schema fixed.");
   });
 
-  // =========================
-  // 🔍 AI DIFF BUTTON
-  // =========================
-  document.getElementById("aiDiffBtn").addEventListener("click", () => {
-    const a = parseManualSchema(document.getElementById("compareA").value);
-    const b = parseManualSchema(document.getElementById("compareB").value);
+  safeBind("aiDiffBtn", () => {
+    const a = parseManualSchema(document.getElementById("compareA")?.value);
+    const b = parseManualSchema(document.getElementById("compareB")?.value);
 
     if (!a || !b) return toast("Paste both schemas first.");
 
@@ -259,15 +257,11 @@ function bindTools() {
     showAIDiff(diff);
   });
 
-  // =========================
-  // 🔧 FIX DIFF BUTTON (FIXED)
-  // =========================
-  document.getElementById("fixDiffBtn").addEventListener("click", () => {
+  safeBind("fixDiffBtn", () => {
     const schema = state.currentSchema;
     if (!schema) return toast("Load schema first.");
 
     const fixed = autoFixSchema(structuredClone(schema));
-
     updateOutput(fixed);
 
     toast("AI fixed schema based on diff analysis.");
@@ -1340,8 +1334,9 @@ function toast(message) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => dom.toast.classList.remove("visible"), 3200);
 }
+
 function generateAIDiff(a, b) {
-    const seoImpactMap = {
+  const seoImpactMap = {
     logo: "May reduce Knowledge Panel eligibility",
     name: "Core entity signal for Google understanding",
     url: "Critical for indexing and entity linking",
@@ -1354,6 +1349,7 @@ function generateAIDiff(a, b) {
     author: "E-E-A-T authority signal",
     datePublished: "Freshness ranking signal"
   };
+
   const flatA = flattenObject(a);
   const flatB = flattenObject(b);
 
@@ -1366,19 +1362,21 @@ function generateAIDiff(a, b) {
       changes.push({
         type: "added",
         key,
-        message: `${key} was ${changes.type}. Impact: ${seoImpactMap[key] || "Helps SEO completeness and structured data quality."}``
+        message: `${key} was added. Impact: ${seoImpactMap[key] || "Helps SEO completeness and structured data quality."}`
       });
+
     } else if (!(key in flatB)) {
       changes.push({
         type: "removed",
         key,
-        message: `${key} was removed. ${seoImpactMap[key] || "May negatively impact schema completeness and rich result eligibility."}`
+        message: `${key} was removed. Impact: ${seoImpactMap[key] || "May negatively impact schema completeness and rich result eligibility."}`
       });
+
     } else if (JSON.stringify(flatA[key]) !== JSON.stringify(flatB[key])) {
       changes.push({
         type: "changed",
         key,
-        message: `${key} was modified. ${seoImpactMap[key] || "May affect how Google interprets structured data."}`
+        message: `${key} was modified. Impact: ${seoImpactMap[key] || "May affect how Google interprets structured data."}`
       });
     }
   });
