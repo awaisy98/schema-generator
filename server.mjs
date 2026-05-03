@@ -131,7 +131,6 @@ async function serveStatic(request, response) {
 
 const server = http.createServer(async (request, response) => {
 
-  
   // ✅ HANDLE CORS PRE-FLIGHT REQUEST
   if (request.method === "OPTIONS") {
     setCorsHeaders(response);
@@ -154,4 +153,10 @@ const server = http.createServer(async (request, response) => {
   }
 
   sendJson(response, 405, { error: "Method not allowed" });
+});
+
+
+// 🔥 THIS WAS MISSING (CRITICAL FIX)
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Schema Studio running on port ${port}`);
 });
