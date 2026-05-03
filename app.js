@@ -31,16 +31,21 @@ const dom = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  bindNavigation();
-  bindTabs();
-  bindExtraction();
-  bindReplication();
-  bindGenerator();
-  bindTools();
-  renderSavedSchemas();
-  updateOutput(null);
-});
+  try {
+    bindNavigation();
+    bindTabs();
+    bindExtraction();
+    bindReplication();
+    bindGenerator();
+    bindTools();
+    renderSavedSchemas();
+    updateOutput(null);
 
+    console.log("All systems initialized");
+  } catch (err) {
+    console.error("App initialization failed:", err);
+  }
+});
 // =============================
 // 🔥 SCHEMA ENGINE (NEW CORE)
 // =============================
@@ -109,10 +114,13 @@ function bindExtraction() {
     await extractFromUrl(document.getElementById("quickUrl").value, "quick");
   });
 
-  document.getElementById("extractForm").addEventListener("submit", async (event) => {
+ const extractForm = document.getElementById("extractForm");
+if (extractForm) {
+  extractForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await extractFromUrl(document.getElementById("extractUrl").value, "extractor");
+    await extractFromUrl(document.getElementById("quickUrl").value, "quick");
   });
+}
 
   document.getElementById("parseManualBtn").addEventListener("click", () => {
     const parsed = parseManualSchema(document.getElementById("manualSchemaInput").value);
@@ -201,6 +209,7 @@ function bindGenerator() {
 }
 
 function bindTools() {
+  console.log("bindTools running");
   document.getElementById("compareBtn").addEventListener("click", compareSchemas);
   document.getElementById("diffBtn").addEventListener("click", smartDiffSchemas);
 
@@ -265,6 +274,7 @@ function bindTools() {
     addChat("assistant", "Applied smart diff-based fixes.");
   });
 }
+
 async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = true) {
   const cleanUrl = normalizeUrl(url);
   if (!cleanUrl) return toast("Enter a valid URL.");
