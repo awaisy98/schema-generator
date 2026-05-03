@@ -41,6 +41,41 @@ document.addEventListener("DOMContentLoaded", () => {
   updateOutput(null);
 });
 
+// =============================
+// 🔥 SCHEMA ENGINE (NEW CORE)
+// =============================
+
+function runSchemaEngine(input, options = {}) {
+  try {
+    let schema = input;
+
+    // 1. Normalize
+    schema = normalizeSchema(schema);
+
+    // 2. Enhance (AI improvements always applied)
+    schema = improveSchema(schema);
+
+    // 3. Validate-safe fallback
+    if (!schema) {
+      toast("Invalid schema generated");
+      return null;
+    }
+
+    // 4. Update global state
+    state.currentSchema = schema;
+
+    // 5. Output
+    updateOutput(schema);
+
+    return schema;
+
+  } catch (err) {
+    console.error("Engine Error:", err);
+    toast("Schema engine failed");
+    return null;
+  }
+}
+
 function bindNavigation() {
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => {
@@ -181,50 +216,55 @@ function bindTools() {
     toast("Saved schemas cleared.");
   });
 
-  // ✅ AUTO FIX BUTTON (corrected)
+  // =========================
+  // ✅ AUTO FIX BUTTON (FIXED)
+  // =========================
   document.getElementById("autoFixBtn").addEventListener("click", () => {
     if (!state.currentSchema) {
-      return toast("Load or generate schema first.");
+      toast("Load or generate schema first.");
+      return;
     }
 
-    if (!state.currentSchema) {
-    toast("No schema loaded to fix.");
-    return;
-    }
+    const fixed = safeRun(() =>
+      autoFixSchema(structuredClone(state.currentSchema))
+    );
 
-    const fixed = safeRun(() => improveSchema(state.currentSchema));
-    if (fixed) updateOutput(fixed); // ✅ FIX HERE
+    if (!fixed) return;
 
     updateOutput(fixed);
 
-    addChat("assistant", "Schema auto-fixed with SEO best practices.");
+    addChat("assistant", "Schema auto-fixed with structural cleanup rules.");
     toast("✅ Schema fixed.");
   });
+
+  // =========================
+  // 🔍 AI DIFF BUTTON
+  // =========================
   document.getElementById("aiDiffBtn").addEventListener("click", () => {
-  const a = parseManualSchema(document.getElementById("compareA").value);
-  const b = parseManualSchema(document.getElementById("compareB").value);
+    const a = parseManualSchema(document.getElementById("compareA").value);
+    const b = parseManualSchema(document.getElementById("compareB").value);
 
-  if (!a || !b) return toast("Paste both schemas first.");
+    if (!a || !b) return toast("Paste both schemas first.");
 
-  const diff = generateAIDiff(a, b);
-  showAIDiff(diff);
-});
+    const diff = generateAIDiff(a, b);
+    showAIDiff(diff);
+  });
+
+  // =========================
+  // 🔧 FIX DIFF BUTTON (FIXED)
+  // =========================
   document.getElementById("fixDiffBtn").addEventListener("click", () => {
-  const schema = state.currentSchema;
-  if (!schema) return toast("Load schema first.");
+    const schema = state.currentSchema;
+    if (!schema) return toast("Load schema first.");
 
-  const fixed = autoFixSchema(schema);
-  updateOutput(fixed);
+    const fixed = autoFixSchema(structuredClone(schema));
 
-  toast("AI fixed schema based on diff analysis.");
-  addChat("assistant", "Applied smart diff-based fixes.");
-});
+    updateOutput(fixed);
+
+    toast("AI fixed schema based on diff analysis.");
+    addChat("assistant", "Applied smart diff-based fixes.");
+  });
 }
-
-function autoFixSchema(schema) {
-  return improveSchema(schema);
-}
-
 async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = true) {
   const cleanUrl = normalizeUrl(url);
   if (!cleanUrl) return toast("Enter a valid URL.");
@@ -395,29 +435,21 @@ function parseManualSchema(value) {
 }
 
 function updateOutput(schema) {
-  // ✅ Fix: Normalize schema into @graph format
-  let normalizedSchema = schema;
+  if (!schema) return;
 
-  if (Array.isArray(schema)) {
-  normalizedSchema = {
-    "@context": "https://schema.org",
-    "@graph": schema
-  };
-} else if (schema && !schema["@context"]) {
-  normalizedSchema["@context"] = "https://schema.org";
-}
+  const safeSchema = structuredClone(schema);
 
-  state.currentSchema = normalizedSchema;
+  state.currentSchema = safeSchema;
 
-  dom.schemaEditor.value = normalizedSchema
-    ? JSON.stringify(normalizedSchema, null, 2)
-    : "";
+  dom.schemaEditor.value = JSON.stringify(safeSchema, null, 2);
 
-  renderStructuredView(normalizedSchema);
-  renderValidation(normalizedSchema);
-  updateRichResultsLink(normalizedSchema);
-  const detectedType = schema ? detectSchemaType(normalizedSchema, getFirstUrl(normalizedSchema)) : "Unknown";  
-  addChat("assistant", `Detected page type: ${detectedType}. Smart suggestions applied.`);
+  renderStructuredView(safeSchema);
+  renderValidation(safeSchema);
+  updateRichResultsLink(safeSchema);
+
+  const detectedType = detectSchemaType(safeSchema, getFirstUrl(safeSchema));
+
+  addChat("assistant", `Detected page type: ${detectedType}`);
 }
 
 function renderValidation(schema) {
@@ -748,84 +780,26 @@ function improveSchema(schema) {
 
 function autoFixSchema(schema) {
   const cloned = structuredClone(schema);
-  const items = flattenSchemaItems(cloned).map(item => item.data || item);
+  const items = flattenSchemaItems(cloned).map(i => i.data || i);
+
   const detectedType = detectSchemaType(cloned, getFirstUrl(cloned));
 
   items.forEach((item) => {
     const url = item.url || getFirstUrl(cloned) || "";
 
-    item["@context"] = item["@context"] || "https://schema.org";
-    item["@type"] = detectedType || item["@type"];
+    item["@context"] = "https://schema.org";
+    item["@type"] = item["@type"] || detectedType;
 
-    if (!item.name && item.headline) item.name = item.headline;
-
-    if (!item.description && item.name) {
-      item.description = `${item.name} - detailed information and overview.`;
+    if (!item.name && item.headline) {
+      item.name = item.headline;
     }
 
-    if (url && !item["@id"]) {
+    if (!item["@id"] && url) {
       item["@id"] = `${url.replace(/\/$/, "")}#schema`;
-    }
-
-    // Product
-    if (detectedType === "Product") {
-      if (!item.image) item.image = `${url}/image.jpg`;
-
-      if (!item.offers) {
-        item.offers = {
-          "@type": "Offer",
-          url,
-          priceCurrency: "USD",
-          price: "0",
-          availability: "https://schema.org/InStock"
-        };
-      }
-    }
-
-    // Article
-    if (["Article", "BlogPosting"].includes(detectedType)) {
-      if (!item.author) {
-        item.author = { "@type": "Person", name: "Editorial Team" };
-      }
-
-      if (!item.publisher) {
-        item.publisher = { "@type": "Organization", name: item.name || "Publisher", url };
-      }
-
-      if (!item.datePublished) {
-        item.datePublished = new Date().toISOString().slice(0, 10);
-      }
-    }
-
-    // LocalBusiness
-    if (["LocalBusiness", "MedicalBusiness", "MedicalClinic"].includes(detectedType)) {
-      if (!item.address) {
-        item.address = { "@type": "PostalAddress", streetAddress: "Your Business Address" };
-      }
-
-      if (!item.telephone) {
-        item.telephone = "+1-000-000-0000";
-      }
-    }
-
-    // FAQ
-    if (detectedType === "FAQPage") {
-      if (!item.mainEntity || !item.mainEntity.length) {
-        item.mainEntity = [
-          {
-            "@type": "Question",
-            name: "Sample Question",
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: "Sample Answer"
-            }
-          }
-        ];
-      }
     }
   });
 
-  return improveSchema(cloned);
+  return cloned;
 }
 
 async function handleSitemapUpload(event) {
@@ -1382,7 +1356,7 @@ function generateAIDiff(a, b) {
       changes.push({
         type: "added",
         key,
-        message: `${key} was added. ${seoImpactMap[key] || "Improves structured data completeness and search visibility."}`
+        message: `${key} was ${changes.type}. Impact: ${seoImpactMap[key] || "Helps SEO completeness and structured data quality."}``
       });
     } else if (!(key in flatB)) {
       changes.push({
