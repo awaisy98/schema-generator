@@ -311,31 +311,25 @@ function parseManualSchema(value) {
 }
 
 function updateOutput(schema) {
-  state.currentSchema = schema;
-  dom.schemaEditor.value = schema ? JSON.stringify(schema, null, 2) : "";
-  renderStructuredView(schema);
-  renderValidation(schema);
-  updateRichResultsLink(schema);
-}
+  // ✅ Fix: Normalize schema into @graph format
+  let normalizedSchema = schema;
 
-function renderStructuredView(schema) {
-  if (!schema) {
-    dom.structuredView.className = "structured-view empty-state";
-    dom.structuredView.textContent = "No schema loaded yet.";
-    return;
+  if (Array.isArray(schema)) {
+    normalizedSchema = {
+      "@context": "https://schema.org",
+      "@graph": schema
+    };
   }
 
-  dom.structuredView.className = "structured-view";
-  const items = flattenSchemaItems(schema);
-  dom.structuredView.innerHTML = items.map((item, index) => {
-    const data = item.data || item;
-    const title = data["@type"] || item.source || `Schema ${index + 1}`;
-    const rows = Object.entries(data)
-      .slice(0, 10)
-      .map(([key, value]) => `<div class="meta-row"><strong>${escapeHtml(key)}</strong>${escapeHtml(summarizeValue(value))}</div>`)
-      .join("");
-    return `<div class="schema-item"><h3>${escapeHtml(title)}</h3><div class="meta-grid">${rows}</div></div>`;
-  }).join("");
+  state.currentSchema = normalizedSchema;
+
+  dom.schemaEditor.value = normalizedSchema
+    ? JSON.stringify(normalizedSchema, null, 2)
+    : "";
+
+  renderStructuredView(normalizedSchema);
+  renderValidation(normalizedSchema);
+  updateRichResultsLink(normalizedSchema);
 }
 
 function renderValidation(schema) {
