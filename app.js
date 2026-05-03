@@ -193,6 +193,25 @@ function bindTools() {
     addChat("assistant", "Schema auto-fixed with SEO best practices.");
     toast("✅ Schema fixed.");
   });
+  document.getElementById("aiDiffBtn").addEventListener("click", () => {
+  const a = parseManualSchema(document.getElementById("compareA").value);
+  const b = parseManualSchema(document.getElementById("compareB").value);
+
+  if (!a || !b) return toast("Paste both schemas first.");
+
+  const diff = generateAIDiff(a, b);
+  showAIDiff(diff);
+});
+  document.getElementById("fixDiffBtn").addEventListener("click", () => {
+  const schema = state.currentSchema;
+  if (!schema) return toast("Load schema first.");
+
+  const fixed = autoFixSchema(schema);
+  updateOutput(fixed);
+
+  toast("AI fixed schema based on diff analysis.");
+  addChat("assistant", "Applied smart diff-based fixes.");
+});
 }
 
 function autoFixSchema(schema) {
@@ -387,7 +406,7 @@ function updateOutput(schema) {
   renderStructuredView(normalizedSchema);
   renderValidation(normalizedSchema);
   updateRichResultsLink(normalizedSchema);
-  const detectedType = detectSchemaType(normalizedSchema, getFirstUrl(normalizedSchema));
+  const detectedType = schema ? detectSchemaType(normalizedSchema, getFirstUrl(normalizedSchema)) : "Unknown";  
   addChat("assistant", `Detected page type: ${detectedType}. Smart suggestions applied.`);
 }
 
@@ -1326,4 +1345,54 @@ function toast(message) {
   dom.toast.classList.add("visible");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => dom.toast.classList.remove("visible"), 3200);
+}
+function generateAIDiff(a, b) {
+  const flatA = flattenObject(a);
+  const flatB = flattenObject(b);
+
+  const allKeys = [...new Set([...Object.keys(flatA), ...Object.keys(flatB)])];
+
+  const changes = [];
+
+  allKeys.forEach((key) => {
+    if (!(key in flatA)) {
+      changes.push({
+        type: "added",
+        key,
+        message: `${key} was added (positive SEO signal)`
+      });
+    } else if (!(key in flatB)) {
+      changes.push({
+        type: "removed",
+        key,
+        message: `${key} was removed (possible SEO loss)`
+      });
+    } else if (JSON.stringify(flatA[key]) !== JSON.stringify(flatB[key])) {
+      changes.push({
+        type: "changed",
+        key,
+        message: `${key} was modified (may affect rich results)`
+      });
+    }
+  });
+
+  return changes;
+}
+
+function showAIDiff(diff) {
+  const output = document.getElementById("diffView");
+
+  const html = diff.map((item) => {
+    return `
+      <div class="diff-row ${item.type}">
+        <strong>${escapeHtml(item.key)}</strong>
+        <p>${escapeHtml(item.message)}</p>
+      </div>
+    `;
+  }).join("");
+
+  output.className = "diff-view";
+  output.innerHTML = html;
+
+  addChat("assistant", `AI Diff complete: ${diff.length} changes analyzed.`);
 }
