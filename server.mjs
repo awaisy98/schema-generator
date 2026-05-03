@@ -16,11 +16,20 @@ const mimeTypes = {
   ".svg": "image/svg+xml"
 };
 
+function setCorsHeaders(response) {
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
 function sendJson(response, statusCode, payload) {
+  setCorsHeaders(response); // 👈 ADD THIS
+
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
   });
+
   response.end(JSON.stringify(payload));
 }
 
@@ -109,7 +118,8 @@ async function serveStatic(request, response) {
     const content = await readFile(filePath);
     const extension = path.extname(filePath);
     response.writeHead(200, {
-      "Content-Type": mimeTypes[extension] || "application/octet-stream"
+      "Content-Type": mimeTypes[extension] || "application/octet-stream",
+      "Access-Control-Allow-Origin": "*" // 👈 ADD THIS
     });
     response.end(content);
   } catch {
@@ -126,9 +136,7 @@ function setCorsHeaders(res) {
 
 const server = http.createServer(async (request, response) => {
 
-  response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  
   // ✅ HANDLE CORS PRE-FLIGHT REQUEST
   if (request.method === "OPTIONS") {
     setCorsHeaders(response);
