@@ -118,7 +118,25 @@ async function serveStatic(request, response) {
   }
 }
 
+function setCorsHeaders(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
 const server = http.createServer(async (request, response) => {
+
+  // ✅ HANDLE CORS PRE-FLIGHT REQUEST
+  if (request.method === "OPTIONS") {
+    setCorsHeaders(response);
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
+  // ✅ ADD CORS TO ALL RESPONSES
+  setCorsHeaders(response);
+
   if (request.method === "POST" && request.url?.startsWith("/api/extract-schema")) {
     await handleSchemaExtract(request, response);
     return;
@@ -130,8 +148,4 @@ const server = http.createServer(async (request, response) => {
   }
 
   sendJson(response, 405, { error: "Method not allowed" });
-});
-
-server.listen(port, () => {
-  console.log(`Schema Studio running at http://localhost:${port}`);
 });
