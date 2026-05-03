@@ -282,35 +282,19 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
       throw new Error("Empty or invalid HTML received");
     }
 
-    const schema = extractSchemasFromHtml(html, cleanUrl);
+    const schema = extractSchemasFromHtml(html, cleanUrl) || [];
 
-    if (shouldUpdateOutput) {
-      updateOutput(schema.length ? schema : null);
-    }
-
-    if (schema.length) {
-      toast(`✅ Found ${schema.length} schema block(s).`);
-      return schema;
-    } else {
-      toast("⚠️ No schema markup found on this page.");
-      return null;
-    }
-
-  } catch (error) {
-    console.error("Extraction Error:", error);
-
-    const fallback = buildCorsFallback(cleanUrl, context);
-
-    if (shouldUpdateOutput) {
-      updateOutput(fallback);
-    }
-
-    // Show real error message
-    toast("No schema found. Try manual HTML input.");
-    return null;
+if (shouldUpdateOutput) {
+  updateOutput(schema.length ? schema : null);
 }
-  }
+
+if (schema.length > 0) {
+  toast(`✅ Found ${schema.length} schema block(s).`);
+  return schema;
 }
+
+toast("⚠️ No schema markup found on this page.");
+return [];
 
 async function fetchHtmlForExtraction(url) {
   try {
