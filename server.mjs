@@ -34,6 +34,23 @@ async function readJson(request) {
   return raw ? JSON.parse(raw) : {};
 }
 
+function extractJsonLd(html) {
+  const matches = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+
+  const schemas = [];
+
+  for (const match of matches) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      schemas.push(parsed);
+    } catch (e) {
+      // ignore invalid JSON
+    }
+  }
+
+  return schemas;
+}
+
 async function handleSchemaExtract(request, response) {
   try {
     const body = await readJson(request);
@@ -63,7 +80,14 @@ async function handleSchemaExtract(request, response) {
     }
 
     const html = await res.text();
-    sendJson(response, 200, { html });
+    const schemas = extractJsonLd(html);
+
+    sendJson(response, 200, {
+      success: true,
+      count: schemas.length,
+      schemas
+    });
+
   } catch (err) {
     sendJson(response, 500, { error: "Failed to fetch website" });
   }
