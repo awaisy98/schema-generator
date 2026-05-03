@@ -176,6 +176,15 @@ function bindTools() {
     renderSavedSchemas();
     toast("Saved schemas cleared.");
   });
+  document.getElementById("autoFixBtn").addEventListener("click", () => {
+  if (!state.currentSchema) return toast("Load or generate schema first.");
+
+  const fixed = autoFixSchema(state.currentSchema);
+  updateOutput(fixed);
+
+  addChat("assistant", "Schema auto-fixed with SEO best practices.");
+  toast("✅ Schema fixed.");
+});
 }
 
 async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = true) {
@@ -694,6 +703,88 @@ function improveSchema(schema) {
   });
 
   return cloned;
+}
+
+function autoFixSchema(schema) {
+  const cloned = structuredClone(schema);
+  const items = flattenSchemaItems(cloned).map(item => item.data || item);
+  const detectedType = detectSchemaType(cloned, getFirstUrl(cloned));
+
+  items.forEach((item) => {
+    const url = item.url || getFirstUrl(cloned) || "";
+
+    item["@context"] = item["@context"] || "https://schema.org";
+    item["@type"] = detectedType || item["@type"];
+
+    if (!item.name && item.headline) item.name = item.headline;
+
+    if (!item.description && item.name) {
+      item.description = `${item.name} - detailed information and overview.`;
+    }
+
+    if (url && !item["@id"]) {
+      item["@id"] = `${url.replace(/\/$/, "")}#schema`;
+    }
+
+    // Product
+    if (detectedType === "Product") {
+      if (!item.image) item.image = `${url}/image.jpg`;
+
+      if (!item.offers) {
+        item.offers = {
+          "@type": "Offer",
+          url,
+          priceCurrency: "USD",
+          price: "0",
+          availability: "https://schema.org/InStock"
+        };
+      }
+    }
+
+    // Article
+    if (["Article", "BlogPosting"].includes(detectedType)) {
+      if (!item.author) {
+        item.author = { "@type": "Person", name: "Editorial Team" };
+      }
+
+      if (!item.publisher) {
+        item.publisher = { "@type": "Organization", name: item.name || "Publisher", url };
+      }
+
+      if (!item.datePublished) {
+        item.datePublished = new Date().toISOString().slice(0, 10);
+      }
+    }
+
+    // LocalBusiness
+    if (["LocalBusiness", "MedicalBusiness", "MedicalClinic"].includes(detectedType)) {
+      if (!item.address) {
+        item.address = { "@type": "PostalAddress", streetAddress: "Your Business Address" };
+      }
+
+      if (!item.telephone) {
+        item.telephone = "+1-000-000-0000";
+      }
+    }
+
+    // FAQ
+    if (detectedType === "FAQPage") {
+      if (!item.mainEntity || !item.mainEntity.length) {
+        item.mainEntity = [
+          {
+            "@type": "Question",
+            name: "Sample Question",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Sample Answer"
+            }
+          }
+        ];
+      }
+    }
+  });
+
+  return improveSchema(cloned);
 }
 
 async function handleSitemapUpload(event) {
