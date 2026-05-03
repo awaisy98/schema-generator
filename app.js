@@ -182,22 +182,41 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
   const cleanUrl = normalizeUrl(url);
   if (!cleanUrl) return toast("Enter a valid URL.");
 
-  toast("Attempting server-assisted extraction.");
+  toast("Fetching website and extracting schema...");
+
   try {
     const html = await fetchHtmlForExtraction(cleanUrl);
+
+    if (!html || html.length < 50) {
+      throw new Error("Empty or invalid HTML received");
+    }
+
     const schema = extractSchemasFromHtml(html, cleanUrl);
 
-    if (shouldUpdateOutput) updateOutput(schema.length ? schema : null);
-    if (schema.length) {
-      toast(`Found ${schema.length} schema block(s).`);
-      return schema;
+    if (shouldUpdateOutput) {
+      updateOutput(schema.length ? schema : null);
     }
-    toast("No schema markup found on the fetched page.");
-    return null;
+
+    if (schema.length) {
+      toast(`✅ Found ${schema.length} schema block(s).`);
+      return schema;
+    } else {
+      toast("⚠️ No schema markup found on this page.");
+      return null;
+    }
+
   } catch (error) {
+    console.error("Extraction Error:", error);
+
     const fallback = buildCorsFallback(cleanUrl, context);
-    if (shouldUpdateOutput) updateOutput(fallback);
-    toast("Extraction failed. Run the Node server or paste HTML/schema to continue.");
+
+    if (shouldUpdateOutput) {
+      updateOutput(fallback);
+    }
+
+    // Show real error message
+    toast(`❌ Extraction failed: ${error.message}`);
+
     return context === "replicator" ? fallback : null;
   }
 }
@@ -209,8 +228,23 @@ async function fetchHtmlForExtraction(url) {
     body: JSON.stringify({ url })
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Extraction API returned ${res.status}`);
+  let data;
+
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("Invalid JSON response from server");
+  }
+
+  if (!res.ok) {
+    console.error("API Error:", data);
+    throw new Error(data.error || `API returned ${res.status}`);
+  }
+
+  if (!data.html) {
+    throw new Error("No HTML returned from API");
+  }
+
   return data.html;
 }
 
