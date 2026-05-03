@@ -306,15 +306,16 @@ async function fetchHtmlForExtraction(url) {
 
     const data = await res.json();
 
-    if (!data || !data.html) {
-      throw new Error("No HTML returned from API");
+    // ✅ FIX HERE
+    if (!data || !data.schemas) {
+      throw new Error("No schema returned from API");
     }
 
-    return data.html;
+    return data.schemas;
 
   } catch (err) {
     console.error("FETCH FAILED:", err);
-    throw new Error("Backend request failed (CORS or server issue)");
+    throw new Error("Backend request failed");
   }
 }
 
