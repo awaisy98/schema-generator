@@ -349,11 +349,13 @@ function updateOutput(schema) {
   let normalizedSchema = schema;
 
   if (Array.isArray(schema)) {
-    normalizedSchema = {
-      "@context": "https://schema.org",
-      "@graph": schema
-    };
-  }
+  normalizedSchema = {
+    "@context": "https://schema.org",
+    "@graph": schema
+  };
+} else if (schema && !schema["@context"]) {
+  normalizedSchema["@context"] = "https://schema.org";
+}
 
   state.currentSchema = normalizedSchema;
 
@@ -364,6 +366,8 @@ function updateOutput(schema) {
   renderStructuredView(normalizedSchema);
   renderValidation(normalizedSchema);
   updateRichResultsLink(normalizedSchema);
+  const detectedType = detectSchemaType(normalizedSchema, getFirstUrl(normalizedSchema));
+  addChat("assistant", `Detected page type: ${detectedType}. Smart suggestions applied.`);
 }
 
 function renderValidation(schema) {
@@ -374,14 +378,27 @@ function renderValidation(schema) {
   }
 
   const results = validateSchema(schema);
-  dom.validationView.className = "validation-list";
-  dom.validationView.innerHTML = results.map((item) => validationMarkup(item.status, item.title, item.message)).join("");
+  const suggestions = getSchemaSuggestions(schema, getFirstUrl(schema));  dom.validationView.className = "validation-list";
+dom.validationView.innerHTML = [
+  ...results.map((item) =>
+    validationMarkup(item.status, item.title, item.message)
+  ),
+
+  ...suggestions.map((s) =>
+    validationMarkup(
+      s.type === "improve" ? "warn" : "info",
+      "Smart Suggestion",
+      s.message
+    )
+  )
+].join("");
 }
 
 function validateSchema(schema) {
   const results = [];
-  const items = flattenSchemaItems(schema).map((item) => item.data || item);
-
+const items = [...new Set(
+  flattenSchemaItems(schema).map(item => JSON.stringify(item))
+)].map(str => JSON.parse(str));
   results.push({
     status: "pass",
     title: "Valid JSON",
@@ -906,11 +923,38 @@ function buildCorsFallback(url, context) {
 }
 
 function flattenSchemaItems(schema) {
-  if (!schema) return [];
-  if (Array.isArray(schema)) return schema.flatMap((item) => flattenSchemaItems(item));
-  if (schema["@graph"] && Array.isArray(schema["@graph"])) return schema["@graph"];
-  if (schema.data) return flattenSchemaItems(schema.data);
-  return [schema];
+  const results = [];
+
+  function walk(node) {
+    if (!node) return;
+
+    // If array → walk each
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+
+    // If object
+    if (typeof node === "object") {
+
+      // If @graph exists → flatten it
+      if (node["@graph"] && Array.isArray(node["@graph"])) {
+        node["@graph"].forEach(walk);
+        return;
+      }
+
+      // Push current node as valid schema item
+      if (node["@type"]) {
+        results.push(node);
+      }
+
+      // Traverse deeper
+      Object.values(node).forEach(walk);
+    }
+  }
+
+  walk(schema);
+  return results;
 }
 
 function flattenObject(obj, prefix = "", output = {}) {
@@ -939,9 +983,44 @@ function makeAddress(address) {
 }
 
 function summarizeValue(value) {
-  if (value === undefined) return "";
-  const text = typeof value === "string" ? value : JSON.stringify(value);
-  return text && text.length > 120 ? `${text.slice(0, 117)}...` : text;
+  if (value === undefined || value === null) return "";
+
+  // If string → return clean
+  if (typeof value === "string") {
+    return value.length > 120 ? value.slice(0, 117) + "..." : value;
+  }
+
+  // If number or boolean
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  // If array
+  if (Array.isArray(value)) {
+    if (!value.length) return "[]";
+
+    const preview = value.slice(0, 2).map((item) => {
+      if (typeof item === "object") {
+        return item["@type"] || "Object";
+      }
+      return String(item);
+    });
+
+    return `[${preview.join(", ")}${value.length > 2 ? "..." : ""}]`;
+  }
+
+  // If object
+  if (typeof value === "object") {
+    // Show type if exists
+    if (value["@type"]) {
+      return `{ ${value["@type"]} }`;
+    }
+
+    const keys = Object.keys(value);
+    return `{ ${keys.slice(0, 3).join(", ")}${keys.length > 3 ? "..." : ""} }`;
+  }
+
+  return String(value);
 }
 
 function getSchemaTitle(schema) {
@@ -979,6 +1058,109 @@ function titleFromHost(host) {
 function titleFromPath(path) {
   const last = path.split("/").filter(Boolean).pop() || "";
   return last.replace(/[-_]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function detectSchemaType(schema, url = "") {
+  const items = flattenSchemaItems(schema).map(item => item.data || item);
+  const path = url ? new URL(url).pathname.toLowerCase() : "";
+
+  // Priority 1: Existing schema types
+  const detectedTypes = items.map(item => item["@type"]).filter(Boolean);
+
+  if (detectedTypes.length) {
+    if (detectedTypes.includes("Product")) return "Product";
+    if (detectedTypes.includes("FAQPage")) return "FAQPage";
+    if (detectedTypes.includes("BlogPosting") || detectedTypes.includes("Article")) return "Article";
+    if (detectedTypes.includes("LocalBusiness")) return "LocalBusiness";
+  }
+
+  // Priority 2: URL-based detection
+  if (path.includes("product")) return "Product";
+  if (path.includes("blog") || path.includes("article")) return "Article";
+  if (path.includes("faq")) return "FAQPage";
+  if (path.includes("service")) return "Service";
+  if (path.includes("contact")) return "ContactPage";
+  if (path.includes("about")) return "AboutPage";
+
+  return "WebPage"; // fallback
+}
+
+function getSchemaSuggestions(schema, url = "") {
+  const suggestions = [];
+  const items = flattenSchemaItems(schema).map(item => item.data || item);
+  const detectedType = detectSchemaType(schema, url);
+
+  items.forEach((item) => {
+    const type = item["@type"];
+
+    // 🔥 Suggest better type
+    if (type !== detectedType && detectedType !== "WebPage") {
+      suggestions.push({
+        type: "improve",
+        message: `Consider using "${detectedType}" instead of "${type}" for better SEO targeting.`
+      });
+    }
+
+    // 🔥 Product improvements
+    if (detectedType === "Product") {
+      if (!item.offers) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'offers' with price and availability for Product rich results."
+        });
+      }
+      if (!item.image) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'image' to improve product visibility in search."
+        });
+      }
+    }
+
+    // 🔥 Article improvements
+    if (detectedType === "Article") {
+      if (!item.author) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'author' for credibility and E-E-A-T."
+        });
+      }
+      if (!item.datePublished) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'datePublished' for freshness signals."
+        });
+      }
+    }
+
+    // 🔥 Local SEO improvements
+    if (detectedType === "LocalBusiness") {
+      if (!item.address) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'address' for local SEO ranking."
+        });
+      }
+      if (!item.telephone) {
+        suggestions.push({
+          type: "missing",
+          message: "Add 'telephone' for trust signals."
+        });
+      }
+    }
+
+    // 🔥 FAQ improvements
+    if (detectedType === "FAQPage") {
+      if (!item.mainEntity || !item.mainEntity.length) {
+        suggestions.push({
+          type: "missing",
+          message: "Add FAQ questions with accepted answers."
+        });
+      }
+    }
+  });
+
+  return suggestions;
 }
 
 function escapeHtml(value) {
