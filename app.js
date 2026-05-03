@@ -112,14 +112,14 @@ function bindTabs() {
 function bindExtraction() {
   document.getElementById("quickExtractForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    await extractFromUrl(document.getElementById("quickUrl").value, "quick");
+    await extractFromUrl(document.getElementById("extractUrl").value, "extractor");
   });
 
  const extractForm = document.getElementById("extractForm");
 if (extractForm) {
   extractForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await extractFromUrl(document.getElementById("quickUrl").value, "quick");
+    await extractFromUrl(document.getElementById("extractUrl").value, "extractor");
   });
 }
 
@@ -306,9 +306,8 @@ async function extractFromUrl(url, context = "extractor", shouldUpdateOutput = t
     }
 
     // Show real error message
-    if (!schema || schema.length === 0) {
-  toast("No schema found. Try manual HTML input.");
-  return null;
+    toast("No schema found. Try manual HTML input.");
+    return context === "replicator" ? fallback : null;
 }
 
     return context === "replicator" ? fallback : null;
