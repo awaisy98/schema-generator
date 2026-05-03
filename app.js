@@ -6,7 +6,7 @@ const state = {
   savedSchemas: JSON.parse(localStorage.getItem("schemaStudioSaved") || "[]")
 };
 
-const schemaExtractApi = "https://rank-tracker-studio.onrender.com/api/extract-schema";
+const schemaExtractApi = "https://schema-generator-studio.onrender.com/api/extract-schema";
 
 const schemaDefaults = {
   LocalBusiness: ["name", "url", "telephone", "address", "description"],
